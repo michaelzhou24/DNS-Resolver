@@ -1,6 +1,7 @@
 # C development
 c/http_client
-
+.idea
+.vscode
 *.o
 *.ko
 *.obj
