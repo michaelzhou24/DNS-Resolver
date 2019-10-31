@@ -24,15 +24,17 @@ public class DNSQuery {
         socket = new DatagramSocket();
     }
 
-    public void query() {
-
+    public void query() throws IOException {
+        byte[] frame = buildFrame(fqdn, isIPV6);
+        sendQuery(frame, rootNS);
+        parseQuery();
     }
 
     private byte[] buildFrame(String host, boolean isIPv6) throws IOException {
         ByteArrayOutputStream frame = new ByteArrayOutputStream();
         DataOutputStream data = new DataOutputStream(frame);
         // Query ID
-        data.writeShort(queryID++);
+        data.writeShort(queryID);
         // Standard Query
         data.writeShort(0x0100);
         // Question Count
@@ -74,10 +76,7 @@ public class DNSQuery {
         byte[] buf = new byte[1024];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
-        // this is the response packet
-        for (int i = 0; i < packet.getLength(); i++) {
-            System.out.print(String.format("%x", buf[i]) + " " );
-        }
-        System.out.println();
+        DNSResponse response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID++);
+        response.dumpResponse();
     }
 }

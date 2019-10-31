@@ -34,15 +34,17 @@ public class DNSlookup {
 		boolean tracingOn = false;
 		boolean IPV6Query = false;
 		InetAddress rootNameServer;
-		String UserInput;
 
 		if (argCount < MIN_PERMITTED_ARGUMENT_COUNT || argCount > MAX_PERMITTED_ARGUMENT_COUNT) {
 			usage();
 			return;
 		}
 
-		rootNameServer = InetAddress.getByName(args[0]);
-		String fqdn = args[1];
+//		rootNameServer = InetAddress.getByName(args[0]);
+//		String fqdn = args[1];
+		// Temp commented for testing
+		rootNameServer = InetAddress.getByName("199.7.83.42");
+		String fqdn = "cs.ubc.ca";
 
 		if (argCount == 3) {  // option provided
 			if (args[2].equals("-t"))
