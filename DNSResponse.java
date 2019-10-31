@@ -25,6 +25,10 @@ public class DNSResponse {
     // Note you will almost certainly need some additional instance variables.
 
     // When in trace mode you probably want to dump out all the relevant information in a response
+    // Getters
+    public boolean isAuthoritative() {
+        return authoritative;
+    }
 
 	void dumpResponse() {
         for (int i = 0; i < responsePacket.getLength(); i++) {

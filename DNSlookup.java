@@ -40,11 +40,8 @@ public class DNSlookup {
 			return;
 		}
 
-//		rootNameServer = InetAddress.getByName(args[0]);
-//		String fqdn = args[1];
-		// Temp commented for testing
-		rootNameServer = InetAddress.getByName("199.7.83.42");
-		String fqdn = "cs.ubc.ca";
+		rootNameServer = InetAddress.getByName(args[0]);
+		String fqdn = args[1];
 
 		if (argCount == 3) {  // option provided
 			if (args[2].equals("-t"))
@@ -61,7 +58,7 @@ public class DNSlookup {
 		}
 
 		DNSQuery query = new DNSQuery(fqdn, rootNameServer, tracingOn, IPV6Query);
-		query.query();
+		String result = query.query(rootNameServer);
 	}
 
 //		Scanner in = new Scanner(System.in);

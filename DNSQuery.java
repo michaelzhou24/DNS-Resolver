@@ -16,7 +16,7 @@ public class DNSQuery {
     private boolean toTrace;
     private boolean isIPV6;
 
-    public DNSQuery(String fqdn, InetAddress rootNS, boolean toTrace, boolean isIPV6) throws SocketException {
+    public DNSQuery(String fqdn, InetAddress rootNS, boolean toTrace, boolean isIPV6) throws Exception {
         this.fqdn = fqdn;
         this.rootNS = rootNS;
         this.toTrace = toTrace;
@@ -24,10 +24,17 @@ public class DNSQuery {
         socket = new DatagramSocket();
     }
 
-    public void query() throws IOException {
+    // Recursively go through nameservers
+    public String query(InetAddress NS) throws IOException {
         byte[] frame = buildFrame(fqdn, isIPV6);
-        sendQuery(frame, rootNS);
-        parseQuery();
+        sendQuery(frame, NS);
+        DNSResponse nextNS = parseQuery();
+        if (nextNS.isAuthoritative()) {
+            // we have the ip
+        } else {
+
+        }
+        return null;
     }
 
     private byte[] buildFrame(String host, boolean isIPv6) throws IOException {
@@ -72,11 +79,13 @@ public class DNSQuery {
         }
     }
 
-    private void parseQuery() throws IOException {
+    // Return null/empty string if found ans
+    // Else return IP address of next NS.
+    private DNSResponse parseQuery() throws IOException {
         byte[] buf = new byte[1024];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
         DNSResponse response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID++);
-        response.dumpResponse();
+        return response;
     }
 }
