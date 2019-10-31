@@ -21,17 +21,15 @@ public class DNSlookup {
 
 	private static final int MIN_PERMITTED_ARGUMENT_COUNT = 2;
 	private static final int MAX_PERMITTED_ARGUMENT_COUNT = 3;
-	private static final int DNS_SERVER_PORT = 53;
-	private static DatagramSocket socket;
-	private static String fqdn;
+
 	private static DNSResponse response; // Just to force compilation
-	private static short queryID = 0x0000;
+
 
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		
+
 		int argCount = args.length;
 		boolean tracingOn = false;
 		boolean IPV6Query = false;
@@ -44,7 +42,7 @@ public class DNSlookup {
 		}
 
 		rootNameServer = InetAddress.getByName(args[0]);
-		fqdn = args[1];
+		String fqdn = args[1];
 
 		if (argCount == 3) {  // option provided
 			if (args[2].equals("-t"))
@@ -54,12 +52,16 @@ public class DNSlookup {
 			else if (args[2].equals("-t6")) {
 				tracingOn = true;
 				IPV6Query = true;
-			} else  { // option present but wasn't valid option
+			} else { // option present but wasn't valid option
 				usage();
 				return;
 			}
 		}
-		socket = new DatagramSocket();
+
+		DNSQuery query = new DNSQuery(fqdn, rootNameServer, tracingOn, IPV6Query);
+		query.query();
+	}
+
 //		Scanner in = new Scanner(System.in);
 //		System.out.println("DNSLOOKUP> ");
 //		UserInput = in.nextLine();
@@ -69,62 +71,6 @@ public class DNSlookup {
 //			findAndPrintTrace(commandArgs[1]);
 //
 //		}
-		byte[] frame = buildFrame(fqdn, IPV6Query);
-		sendQuery(frame, rootNameServer);
-		parseQuery();
-	}
-
-	private static byte[] buildFrame(String host, boolean isIPv6) throws IOException {
-		ByteArrayOutputStream frame = new ByteArrayOutputStream();
-		DataOutputStream data = new DataOutputStream(frame);
-		// Query ID
-		data.writeShort(queryID++);
-		// Standard Query
-		data.writeShort(0x0100);
-		// Question Count
-		data.writeShort(0x0001);
-		// Answer Record
-		data.writeShort(0x0000);
-		// Authority Record
-		data.writeShort(0x0000);
-		// Additional Record
-		data.writeShort(0x0000);        
-
-		String[] domainParts = host.split("\\.");
-		for (int i = 0; i<domainParts.length; i++) {
-			byte[] domainBytes = domainParts[i].getBytes("UTF-8");
-			data.writeByte(domainBytes.length);
-			data.write(domainBytes);
-		}
-		data.writeByte(0x00);
-		// Type A
-		if (!isIPv6)
-			data.writeShort(0xFF);
-		// Class IN
-		data.writeShort(0x0001);
-		return frame.toByteArray();
-	}
-
-	private static void sendQuery(byte[] frame, InetAddress rootNameServer) {
-		DatagramPacket dnsReqPacket = new DatagramPacket(frame, frame.length, rootNameServer, DNS_SERVER_PORT);
-		try {
-			socket.send(dnsReqPacket);
-		} catch (IOException e) {
-			System.err.println("Failed to send DNS request.");
-			e.printStackTrace();
-		}
-	}
-
-	private static void parseQuery() throws IOException {
-		byte[] buf = new byte[1024];
-		DatagramPacket packet = new DatagramPacket(buf, buf.length);
-		socket.receive(packet);
-		// this is the response packet
-		for (int i = 0; i < packet.getLength(); i++) {
-			System.out.print(String.format("%x", buf[i]) + " " );
-		}
-		System.out.println();
-	}
 
 	//Encode query as a message following the doamin protocal
 //	private static byte[] encodeQuery(int queryID) {
