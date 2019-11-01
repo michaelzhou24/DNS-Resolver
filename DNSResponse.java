@@ -1,7 +1,9 @@
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOError;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-
-
 
 // Lots of the action associated with handling a DNS query is processing 
 // the response. Although not required you might find the following skeleton of
@@ -13,6 +15,7 @@ import java.net.InetAddress;
 
 public class DNSResponse {
     private int queryID;                  // this is for the response it must match the one in the request 
+    private int expQueryID;               // Expected query ID
     private int answerCount = 0;          // number of answers  
     private boolean decoded = false;      // Was this response successfully decoded
     private int nsCount = 0;              // number of nscount response records
@@ -40,12 +43,12 @@ public class DNSResponse {
     // probably the minimum that you need.
 
 	public DNSResponse (DatagramPacket responsePacket, byte[] data,
-                        int len, String fdqn, boolean isIPV6, int queryID) {
+                        int len, String fdqn, boolean isIPV6, int queryID)  throws IOException {
 	    buf = data;
 	    this.responsePacket = responsePacket;
 	    this.fdqn = fdqn;
 	    this.isIPV6 = isIPV6;
-	    this.queryID = queryID;
+	    this.expQueryID = queryID;
 	    // The following are probably some of the things 
 	    // you will need to do.
 	    // Extract the query ID
@@ -64,8 +67,35 @@ public class DNSResponse {
         readResponse();
 	}
 
-	public void readResponse() {
+    public void readResponse() throws IOException {
+        DataInputStream din = new DataInputStream(new ByteArrayInputStream(buf));
 
+        queryID = (int) din.readShort();
+        System.out.println(String.format("%x", queryID));
+        short flags = din.readShort();
+        System.out.println(String.format("%x", flags));
+        short questions = din.readShort();
+        System.out.println(String.format("%x", questions));
+        answerCount = (int) din.readShort();
+        System.out.println(String.format("%x", answerCount));
+        short numAuth = din.readShort();
+        System.out.println(String.format("%x", numAuth));
+        short numAdditional = din.readShort();
+        System.out.println(String.format("%x", numAdditional));
+
+        // find fdqn
+        StringBuilder responseFdqn = new StringBuilder();
+        int recLen = 0;
+        while ((recLen = din.readByte()) > 0) {
+            byte[] record = new byte[recLen];
+            for (int i = 0; i < recLen; i++) {
+                record[i] = din.readByte();
+            }
+            responseFdqn.append(new String(record, "UTF-8"));
+            responseFdqn.append('.');
+        }
+        responseFdqn.setLength(responseFdqn.length() - 1);
+        System.out.println(responseFdqn.toString());
     }
 
 
