@@ -74,6 +74,12 @@ public class DNSResponse {
         System.out.println(String.format("%x", queryID));
         short flags = din.readShort();
         System.out.println(String.format("%x", flags));
+        // get info from flags
+        // verify response
+        String s = Integer.toBinaryString(flags).substring(16,32);
+        System.out.println(s);
+        
+
         short questions = din.readShort();
         System.out.println(String.format("%x", questions));
         answerCount = (int) din.readShort();
