@@ -1,3 +1,4 @@
+import java.net.DatagramPacket;
 import java.net.InetAddress;
 
 
@@ -17,22 +18,30 @@ public class DNSResponse {
     private int nsCount = 0;              // number of nscount response records
     private int additionalCount = 0;      // number of additional (alternate) response records
     private boolean authoritative = false;// Is this an authoritative record
-
+    private String fdqn;
+    private boolean isIPV6;
+    private DatagramPacket responsePacket;
+    private byte[] buf;
     // Note you will almost certainly need some additional instance variables.
 
     // When in trace mode you probably want to dump out all the relevant information in a response
 
 	void dumpResponse() {
-		
-
-
+        for (int i = 0; i < responsePacket.getLength(); i++) {
+            System.out.print(String.format("%x", buf[i]) + " " );
+        }
 	}
 
     // The constructor: you may want to add additional parameters, but the two shown are 
     // probably the minimum that you need.
 
-	public DNSResponse (byte[] data, int len) {
-	    
+	public DNSResponse (DatagramPacket responsePacket, byte[] data,
+                        int len, String fdqn, boolean isIPV6, int queryID) {
+	    buf = data;
+	    this.responsePacket = responsePacket;
+	    this.fdqn = fdqn;
+	    this.isIPV6 = isIPV6;
+	    this.queryID = queryID;
 	    // The following are probably some of the things 
 	    // you will need to do.
 	    // Extract the query ID
@@ -48,7 +57,12 @@ public class DNSResponse {
 
 	    // Extract list of answers, name server, and additional information response 
 	    // records
+        readResponse();
 	}
+
+	public void readResponse() {
+
+    }
 
 
     // You will probably want a method to extract a compressed FQDN, IP address
