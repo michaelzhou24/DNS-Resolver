@@ -5,18 +5,24 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DNSQuery {
 
-    private static short queryID = 0x0000;
     private final int DNS_SERVER_PORT = 53;
+
+    private short queryID = 0x0000;
     private DatagramSocket socket;
     private String fqdn;
     private InetAddress rootNS;
     private boolean toTrace;
     private boolean isIPV6;
+    private List<String> trace;
+
 
     public DNSQuery(String fqdn, InetAddress rootNS, boolean toTrace, boolean isIPV6) throws Exception {
+        trace = new ArrayList<>();
         this.fqdn = fqdn;
         this.rootNS = rootNS;
         this.toTrace = toTrace;
