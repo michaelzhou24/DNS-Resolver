@@ -135,7 +135,7 @@ public class DNSlookup {
 
     // Decode response header
     private static void decodeResponse(byte[] responseBuffer) {
-        int responseID = getIntFromTwoBytes(responseBuffer[0], responseBuffer[1]);
+        int responseID = TwoByteToInt(responseBuffer[0], responseBuffer[1]);
         int QR = (responseBuffer[2] & 0x80) >>> 7; // get 1st bit
         int opCode = (responseBuffer[2] & 0x78) >>> 3; // get 2nd, 3rd, 4th and 5th bit
         int AA = (responseBuffer[2] & 0x04) >>> 2; // geth 6th
@@ -143,6 +143,14 @@ public class DNSlookup {
         int RD = responseBuffer[2] & 0x01; // get 8th bit
         int RA = responseBuffer[3] & 0x80;
         int RCODE = responseBuffer[3] & 0x0F;
+        System.out.println("responseID: " + responseID);
+        System.out.println("QR: " + QR);
+        System.out.println("opCode: " + opCode);
+        System.out.println("AA: " + AA);
+        System.out.println("TC: " + TC);
+        System.out.println("RD: " + RD);
+        System.out.println("RA: " + RA);
+        System.out.println("RCODE: " + RCODE);
 
         String message = "";
         switch (RCODE) {
@@ -174,10 +182,19 @@ public class DNSlookup {
         int NSCOUNT = TwoByteToInt(responseBuffer[8], responseBuffer[9]);
         int ARCOUNT = TwoByteToInt(responseBuffer[10], responseBuffer[11]);
 
+        System.out.println("QDCOUNT: " + QDCOUNT);
+        System.out.println("ANCOUNT: " + ANCOUNT);
+        System.out.println("NSCOUNT: " + NSCOUNT);
+        System.out.println("ARCOUNT: " + ARCOUNT);
+
+
         // requires work on translating hex into char
 
         int QTYPE = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
         int QCLASS = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
+
+        System.out.println("QTYPE: " + QTYPE);
+        System.out.println("QCLASS: " + QCLASS);
 
         System.out.println("  Answers (" + ANCOUNT + ")");
         for (int i = 0; i < ANCOUNT; i++) {
