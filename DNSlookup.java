@@ -21,7 +21,6 @@ public class DNSlookup {
     private static DNSResponse response; // Just to force compilation
     private static boolean tracingOn = false;
     private static boolean IPV6Query = false;
-//    private static int pointer = 0; // pointer when decoding messages
 
     /**
      * @param args

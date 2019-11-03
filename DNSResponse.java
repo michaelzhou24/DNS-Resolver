@@ -21,6 +21,7 @@ public class DNSResponse {
     private boolean isIPV6;
     private DatagramPacket responsePacket;
     private byte[] buf;
+    private static int pointer = 0;              // pointer for en/decoding messages
     // Note you will almost certainly need some additional instance variables.
 
     // When in trace mode you probably want to dump out all the relevant information in a response
@@ -45,21 +46,6 @@ public class DNSResponse {
 	    this.fdqn = fdqn;
 	    this.isIPV6 = isIPV6;
 	    this.expQueryID = queryID;
-	    // The following are probably some of the things 
-	    // you will need to do.
-	    // Extract the query ID
-
-	    // Make sure the message is a query response and determine
-	    // if it is an authoritative response or not
-
-	    // determine answer count
-
-	    // determine NS Count
-
-	    // determine additional record count
-
-	    // Extract list of answers, name server, and additional information response 
-	    // records
         decodeResponse(buf);
 	}
 
@@ -102,7 +88,10 @@ public class DNSResponse {
 
     // Decode response header
     private static void decodeResponse(byte[] responseBuffer) {
-        int pointer = 0;
+
+
+        // header section:
+
         int responseID = TwoByteToInt(responseBuffer[0], responseBuffer[1]);
         int QR = (responseBuffer[2] & 0x80) >>> 7; // get 1st bit
         int opCode = (responseBuffer[2] & 0x78) >>> 3; // get 2nd, 3rd, 4th and 5th bit
@@ -111,14 +100,14 @@ public class DNSResponse {
         int RD = responseBuffer[2] & 0x01; // get 8th bit
         int RA = responseBuffer[3] & 0x80;
         int RCODE = responseBuffer[3] & 0x0F;
-        System.out.println("responseID: " + responseID);
-        System.out.println("QR: " + QR);
-        System.out.println("opCode: " + opCode);
-        System.out.println("AA: " + AA);
-        System.out.println("TC: " + TC);
-        System.out.println("RD: " + RD);
-        System.out.println("RA: " + RA);
-        System.out.println("RCODE: " + RCODE);
+//        System.out.println("responseID: " + responseID);
+//        System.out.println("QR: " + QR);
+//        System.out.println("opCode: " + opCode);
+//        System.out.println("AA: " + AA);
+//        System.out.println("TC: " + TC);
+//        System.out.println("RD: " + RD);
+//        System.out.println("RA: " + RA);
+//        System.out.println("RCODE: " + RCODE);
 
         String message = "";
         switch (RCODE) {
@@ -144,26 +133,41 @@ public class DNSResponse {
                 message = "FAILED. Unknown RCODE";
                 break;
         }
-        System.out.println(message);
+        // System.out.println(message);
 
         int QDCOUNT = TwoByteToInt(responseBuffer[4], responseBuffer[5]);
         int ANCOUNT = TwoByteToInt(responseBuffer[6], responseBuffer[7]);
         int NSCOUNT = TwoByteToInt(responseBuffer[8], responseBuffer[9]);
         int ARCOUNT = TwoByteToInt(responseBuffer[10], responseBuffer[11]);
 
-        System.out.println("QDCOUNT: " + QDCOUNT);
-        System.out.println("ANCOUNT: " + ANCOUNT);
-        System.out.println("NSCOUNT: " + NSCOUNT);
-        System.out.println("ARCOUNT: " + ARCOUNT);
+//        System.out.println("QDCOUNT: " + QDCOUNT);
+//        System.out.println("ANCOUNT: " + ANCOUNT);
+//        System.out.println("NSCOUNT: " + NSCOUNT);
+//        System.out.println("ARCOUNT: " + ARCOUNT);
 
 
-        // requires work on translating hex into char
+        // question section:
+
+        pointer = 12;
+        String receivedQNAME = "";
+        while(true) {
+            int labelLength = responseBuffer[pointer++] & 0xFF;
+            if (labelLength == 0)
+                break;
+            for (int i = 0; i < labelLength; i++) {
+                char ch = (char) (responseBuffer[pointer++] & 0xFF);
+                receivedQNAME += ch;
+            }
+            receivedQNAME += '.';
+        }
 
         int QTYPE = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
         int QCLASS = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
 
         System.out.println("QTYPE: " + QTYPE);
         System.out.println("QCLASS: " + QCLASS);
+
+        // answer section:
 
         System.out.println("  Answers (" + ANCOUNT + ")");
         for (int i = 0; i < ANCOUNT; i++) {
@@ -173,27 +177,76 @@ public class DNSResponse {
     }
 
 
-    // You will probably want a method to extract a compressed FQDN, IP address
-    // cname, authoritative DNS servers and other values like the query ID etc.
+    private static void decodeOneRR (byte[] responseBuffer){
+        String hostName = getNameAtPointer(responseBuffer, pointer);
+        int typeCode = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
+        int classCode = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
+        long TTL = FoutByteToInt(responseBuffer[pointer++], responseBuffer[pointer++], responseBuffer[pointer++], responseBuffer[pointer++]);
+        int RDATALength = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
+
+    }
 
 
-    // You will also want methods to extract the response records and record
-    // the important values they are returning. Note that an IPV6 reponse record
-    // is of type 28. It probably wouldn't hurt to have a response record class to hold
-    // these records.
 
 
 
-    // ---------------------------------------- Helper Functions
-    // -------------------------------------------
+    // ---------------------------------- Helper Functions ---------------------------------
 
-    // 2 byte -> int
+    /**
+     * 2 byte -> int
+     * @param b1
+     * @param b2
+     * @return
+     */
     private static int TwoByteToInt(byte b1, byte b2) {
         return ((b1 & 0xFF) << 8) + (b2 & 0xFF);
     }
 
-    // 4 byte -> int
+    /**
+     * 4 byte -> int
+     * @param b1
+     * @param b2
+     * @param b3
+     * @param b4
+     * @return
+     */
     private static int FoutByteToInt(byte b1, byte b2, byte b3, byte b4) {
         return ((b1 & 0xFF) << 24) + ((b2 & 0xFF) << 16) + ((b3 & 0xFF) << 8) + (b4 & 0xFF);
+    }
+
+    /**
+     * Recursively resolve the compressed name starting from pointer
+     *
+     * @param buffer byte array to be translated
+     * @param ptr initial location to start decoding
+     * @return resolved domain name
+     **/
+    private static String getNameAtPointer(byte[] buffer, int ptr){
+        String name = "";
+        while(true) {
+            int labelLength = buffer[ptr++] & 0xFF;
+            if (labelLength == 0)
+                break;
+                // Identify message compression used, recursive call to retrieve name
+            else if (labelLength >= 192) {
+                int newPtr = (buffer[ptr++] & 0xFF) + 256 * (labelLength - 192);
+                name += getNameAtPointer(buffer, newPtr);
+                break;
+            }
+            // function to decode encoded name
+            else {
+                for (int i = 0; i < labelLength; i++) {
+                    char ch = (char) (buffer[ptr++] & 0xFF);
+                    name += ch;
+                }
+                name += '.';
+            }
+        }
+
+        pointer = ptr;
+        if (name.length() > 0 && name.charAt(name.length() - 1) == '.') {
+            name = name.substring(0, name.length() - 1);
+        }
+        return name;
     }
 }
