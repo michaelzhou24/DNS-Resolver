@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.InetAddress;
 
 // Lots of the action associated with handling a DNS query is processing 
 // the response. Although not required you might find the following skeleton of
@@ -10,7 +11,7 @@ import java.net.DatagramPacket;
 
 
 public class DNSResponse {
-    private int queryID;                  // this is for the response it must match the one in the request 
+    public static int queryID;                  // this is for the response it must match the one in the request
     private int expQueryID;               // Expected query ID
     private int answerCount = 0;          // number of answers  
     private boolean decoded = false;      // Was this response successfully decoded
@@ -93,6 +94,7 @@ public class DNSResponse {
         // header section:
 
         int responseID = TwoByteToInt(responseBuffer[0], responseBuffer[1]);
+        queryID = responseID;
         int QR = (responseBuffer[2] & 0x80) >>> 7; // get 1st bit
         int opCode = (responseBuffer[2] & 0x78) >>> 3; // get 2nd, 3rd, 4th and 5th bit
         int AA = (responseBuffer[2] & 0x04) >>> 2; // geth 6th
@@ -177,12 +179,40 @@ public class DNSResponse {
     }
 
 
-    private static void decodeOneRR (byte[] responseBuffer){
+    private static void decodeOneRR (byte[] responseBuffer) throws Exception {
         String hostName = getNameAtPointer(responseBuffer, pointer);
         int typeCode = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
         int classCode = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
-        long TTL = FoutByteToInt(responseBuffer[pointer++], responseBuffer[pointer++], responseBuffer[pointer++], responseBuffer[pointer++]);
+        long TTL = FourByteToInt(responseBuffer[pointer++], responseBuffer[pointer++], responseBuffer[pointer++], responseBuffer[pointer++]);
         int RDATALength = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
+        if (typeCode == 1) { // A IPV4 address
+            String address = "";
+            for (int j = 0; j < RDATALength; j++) {
+                int octet = responseBuffer[pointer++] & 0xFF;
+                address += octet + ".";
+            }
+            address = address.substring(0, address.length() - 1);
+            InetAddress addr = null;
+            addr = InetAddress.getByName(address);
+            // create and store a new record in the record class
+            // print
+        }
+        else if (typeCode == 28) { // AAAA IPV6 address
+            String address = "";
+            for (int j = 0; j < RDATALength / 2; j ++) {
+                int octet = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
+                String hex = Integer.toHexString(octet);
+                address += hex + ":";
+            }
+            address = address.substring(0, address.length() - 1);
+            InetAddress addr = null;
+            addr = InetAddress.getByName(address);
+            // create and store a new record in the record class
+            // print
+        }
+
+        // working on decoding NS name
+
 
     }
 
@@ -210,7 +240,7 @@ public class DNSResponse {
      * @param b4
      * @return
      */
-    private static int FoutByteToInt(byte b1, byte b2, byte b3, byte b4) {
+    private static int FourByteToInt(byte b1, byte b2, byte b3, byte b4) {
         return ((b1 & 0xFF) << 24) + ((b2 & 0xFF) << 16) + ((b3 & 0xFF) << 8) + (b4 & 0xFF);
     }
 
