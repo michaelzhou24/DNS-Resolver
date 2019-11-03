@@ -68,7 +68,9 @@ public class DNSQuery {
         data.writeByte(0x00);
         // Type A
         if (!isIPv6)
-            data.writeShort(0xFF);
+            data.writeShort(0x0001);
+        else
+            data.writeShort(0x001c);
         // Class IN
         data.writeShort(0x0001);
         return frame.toByteArray();

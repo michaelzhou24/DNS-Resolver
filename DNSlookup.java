@@ -25,6 +25,7 @@ public class DNSlookup {
     public static void main(String[] args) throws Exception {
         int argCount = args.length;
 
+
         InetAddress rootNameServer;
         String UserInput;
 
