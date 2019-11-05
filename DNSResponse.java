@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.util.*;
 
 // Lots of the action associated with handling a DNS query is processing 
 // the response. Although not required you might find the following skeleton of
@@ -171,15 +172,53 @@ public class DNSResponse {
 
         // answer section:
 
+        DNSResourceRecord record = null;
+
         System.out.println("  Answers (" + ANCOUNT + ")");
         for (int i = 0; i < ANCOUNT; i++) {
-            // requires method decoding each one of the RR received
+            try {
+                decodeOneRR(responseBuffer);
+            } catch (Exception e) {
+                System.out.println("Unkown Host Exception caught");
+            }
         }
+
+        // Authoritative section:
+
+        ArrayList<DNSResourceRecord> AuthoritativeNSs = new ArrayList<DNSResourceRecord>();
+        System.out.println("  Authoritative NameServers: (" + ANCOUNT + ")");
+        for (int i = 0; i < NSCOUNT; i++){
+            try {
+                record = decodeOneRR(responseBuffer);
+            } catch (Exception e) {
+                System.out.println("Unkown Host Exception caught");
+            }
+            if (record != null){
+                AuthoritativeNSs.add(record);
+            }
+        }
+
+        ArrayList<DNSResourceRecord> additionalInfo = new ArrayList<DNSResourceRecord>();
+        System.out.println("  Additional Information (" + ARCOUNT + ")");
+        for (int i=0; i < ARCOUNT; i++) {
+            try {
+                record = decodeOneRR(responseBuffer);
+            } catch (Exception e) {
+                System.out.println("Unkown Host Exception caught");
+            }
+            if (record != null) {
+                additionalInfo.add(record);
+            }
+        }
+
+        // working on returning list of AuthNSs and Additional Info
+
 
     }
 
 
-    private static void decodeOneRR (byte[] responseBuffer) throws Exception {
+    private static DNSResourceRecord decodeOneRR (byte[] responseBuffer) throws Exception {
+        DNSResourceRecord record = null;
         String hostName = getNameAtPointer(responseBuffer, pointer);
         int typeCode = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
         int classCode = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
@@ -208,12 +247,22 @@ public class DNSResponse {
             InetAddress addr = null;
             addr = InetAddress.getByName(address);
             // create and store a new record in the record class
+            record = new DNSResourceRecord(hostName, typeCode, TTL, addr);
             // print
         }
 
         // working on decoding NS name
+        else if (typeCode == 2 || typeCode == 5 || typeCode == 6){ // NS or CNAME or SOA text fqdn
+            String fqdn = getNameAtPointer(responseBuffer, pointer);
+            record = new DNSResourceRecord(hostName, typeCode, TTL, fqdn);
+        }
 
-
+        // all other types
+        else{
+            String fqdn = getNameAtPointer(responseBuffer, pointer);
+            record = new DNSResourceRecord(hostName, typeCode, TTL, fqdn);
+        }
+        return record;
     }
 
 
