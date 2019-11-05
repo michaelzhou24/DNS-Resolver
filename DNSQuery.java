@@ -90,9 +90,14 @@ public class DNSQuery {
     // Else return IP address of next NS.
     private DNSResponse parseQuery() throws IOException {
         byte[] buf = new byte[1024];
-        DatagramPacket packet = new DatagramPacket(buf, buf.length);
-        socket.receive(packet);
-        DNSResponse response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID++);
+        while (true) {
+            DatagramPacket packet = new DatagramPacket(buf, buf.length);
+            socket.receive(packet);
+            DNSResponse response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID++);
+            if (response.queryID == queryID)
+                break;
+        }
+        queryID++;
         return response;
     }
 }
