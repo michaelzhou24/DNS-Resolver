@@ -12,7 +12,7 @@ import java.util.*;
 
 
 public class DNSResponse {
-    public static int queryID;                  // this is for the response it must match the one in the request
+    public int queryID;                  // this is for the response it must match the one in the request
     private int expQueryID;               // Expected query ID
     private int answerCount = 0;          // number of answers  
     private boolean decoded = false;      // Was this response successfully decoded
@@ -23,11 +23,26 @@ public class DNSResponse {
     private boolean isIPV6;
     private DatagramPacket responsePacket;
     private byte[] buf;
-    private static int pointer = 0;              // pointer for en/decoding messages
+    private int pointer = 0;              // pointer for en/decoding messages
     // Note you will almost certainly need some additional instance variables.
+    private ArrayList<DNSResourceRecord> answers;
+    private ArrayList<DNSResourceRecord> additionalInfo;
+    private ArrayList<DNSResourceRecord> AuthoritativeNSs;
 
     // When in trace mode you probably want to dump out all the relevant information in a response
     // Getters
+    public ArrayList<DNSResourceRecord> getAnswers() {
+        return answers;
+    }
+
+    public ArrayList<DNSResourceRecord> getAdditionalInfo() {
+        return additionalInfo;
+    }
+
+    public ArrayList<DNSResourceRecord> getAuthoritativeNSs() {
+        return AuthoritativeNSs;
+    }
+
     public boolean isAuthoritative() {
         return authoritative;
     }
@@ -89,7 +104,7 @@ public class DNSResponse {
 //    }
 
     // Decode response header
-    private static void decodeResponse(byte[] responseBuffer) {
+    private void decodeResponse(byte[] responseBuffer) {
 
 
         // header section:
@@ -142,7 +157,8 @@ public class DNSResponse {
         int ANCOUNT = TwoByteToInt(responseBuffer[6], responseBuffer[7]);
         int NSCOUNT = TwoByteToInt(responseBuffer[8], responseBuffer[9]);
         int ARCOUNT = TwoByteToInt(responseBuffer[10], responseBuffer[11]);
-
+        if (ANCOUNT > 0)
+            authoritative = true;
 //        System.out.println("QDCOUNT: " + QDCOUNT);
 //        System.out.println("ANCOUNT: " + ANCOUNT);
 //        System.out.println("NSCOUNT: " + NSCOUNT);
@@ -173,19 +189,22 @@ public class DNSResponse {
         // answer section:
 
         DNSResourceRecord record = null;
-
+        answers = new ArrayList<>();
         System.out.println("  Answers (" + ANCOUNT + ")");
         for (int i = 0; i < ANCOUNT; i++) {
             try {
-                decodeOneRR(responseBuffer);
+                record = decodeOneRR(responseBuffer);
             } catch (Exception e) {
                 System.out.println("Unkown Host Exception caught");
+            }
+            if (record != null){
+                answers.add(record);
             }
         }
 
         // Authoritative section:
 
-        ArrayList<DNSResourceRecord> AuthoritativeNSs = new ArrayList<DNSResourceRecord>();
+        AuthoritativeNSs = new ArrayList<DNSResourceRecord>();
         System.out.println("  Authoritative NameServers: (" + ANCOUNT + ")");
         for (int i = 0; i < NSCOUNT; i++){
             try {
@@ -198,7 +217,8 @@ public class DNSResponse {
             }
         }
 
-        ArrayList<DNSResourceRecord> additionalInfo = new ArrayList<DNSResourceRecord>();
+
+        additionalInfo = new ArrayList<DNSResourceRecord>();
         System.out.println("  Additional Information (" + ARCOUNT + ")");
         for (int i=0; i < ARCOUNT; i++) {
             try {
@@ -210,14 +230,25 @@ public class DNSResponse {
                 additionalInfo.add(record);
             }
         }
-
+        for (DNSResourceRecord rec : AuthoritativeNSs) {
+            System.out.println(rec.getHostName());
+            System.out.println(rec.getRecordType());
+            System.out.println(rec.getTextFqdn());
+            System.out.println(rec.getTTL());
+        }
+        for (DNSResourceRecord rec : additionalInfo) {
+            System.out.println(rec.getHostName());
+            System.out.println(rec.getRecordType());
+            System.out.println(rec.getTextFqdn());
+            System.out.println(rec.getTTL());
+        }
         // working on returning list of AuthNSs and Additional Info
 
 
     }
 
 
-    private static DNSResourceRecord decodeOneRR (byte[] responseBuffer) throws Exception {
+    private DNSResourceRecord decodeOneRR (byte[] responseBuffer) throws Exception {
         DNSResourceRecord record = null;
         String hostName = getNameAtPointer(responseBuffer, pointer);
         int typeCode = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
@@ -233,6 +264,8 @@ public class DNSResponse {
             address = address.substring(0, address.length() - 1);
             InetAddress addr = null;
             addr = InetAddress.getByName(address);
+
+            record = new DNSResourceRecord(hostName, typeCode, TTL, addr);
             // create and store a new record in the record class
             // print
         }
@@ -277,7 +310,7 @@ public class DNSResponse {
      * @param b2
      * @return
      */
-    private static int TwoByteToInt(byte b1, byte b2) {
+    private int TwoByteToInt(byte b1, byte b2) {
         return ((b1 & 0xFF) << 8) + (b2 & 0xFF);
     }
 
@@ -289,7 +322,7 @@ public class DNSResponse {
      * @param b4
      * @return
      */
-    private static int FourByteToInt(byte b1, byte b2, byte b3, byte b4) {
+    private int FourByteToInt(byte b1, byte b2, byte b3, byte b4) {
         return ((b1 & 0xFF) << 24) + ((b2 & 0xFF) << 16) + ((b3 & 0xFF) << 8) + (b4 & 0xFF);
     }
 
@@ -300,7 +333,7 @@ public class DNSResponse {
      * @param ptr initial location to start decoding
      * @return resolved domain name
      **/
-    private static String getNameAtPointer(byte[] buffer, int ptr){
+    private String getNameAtPointer(byte[] buffer, int ptr){
         String name = "";
         while(true) {
             int labelLength = buffer[ptr++] & 0xFF;

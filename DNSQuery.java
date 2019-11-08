@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,8 +18,8 @@ public class DNSQuery {
     private InetAddress rootNS;
     private boolean toTrace;
     private boolean isIPV6;
-    private List<String> trace;
-
+    private List<DNSResourceRecord> trace;
+    private int queryCount;
 
     public DNSQuery(String fqdn, InetAddress rootNS, boolean toTrace, boolean isIPV6) throws Exception {
         trace = new ArrayList<>();
@@ -26,20 +27,28 @@ public class DNSQuery {
         this.rootNS = rootNS;
         this.toTrace = toTrace;
         this.isIPV6 = isIPV6;
+        this.queryCount = 0;
         socket = new DatagramSocket();
     }
 
     // Recursively go through nameservers
-    public String query(InetAddress NS) throws IOException {
+    public void query(InetAddress NS) throws IOException {
+        queryCount++;
         byte[] frame = buildFrame(fqdn, isIPV6);
         sendQuery(frame, NS);
-        DNSResponse nextNS = parseQuery();
-        if (nextNS.isAuthoritative()) {
-            // we have the ip
-        } else {
+        DNSResponse response = parseQuery();
 
+        if (response.isAuthoritative()) {
+            // we have the ip
+            DNSResourceRecord answer = response.getAnswers().get(0);
+            System.out.println(answer.getTextFqdn());
+            System.out.println(answer.getHostName());
+            System.out.println(answer.getRecordType());
+        } else {
+            String ns = response.getAdditionalInfo().get(0).getTextFqdn();
+            trace.add(response.getAdditionalInfo().get(0));
+            query(InetAddress.getByName(ns));
         }
-        return null;
     }
 
     private byte[] buildFrame(String host, boolean isIPv6) throws IOException {
@@ -89,15 +98,23 @@ public class DNSQuery {
     // Return null/empty string if found ans
     // Else return IP address of next NS.
     private DNSResponse parseQuery() throws IOException {
+        DNSResponse response = null;
         byte[] buf = new byte[1024];
-        while (true) {
-            DatagramPacket packet = new DatagramPacket(buf, buf.length);
+        int i = 0;
+        // Try capturing at most 30 packets
+        DatagramPacket packet = new DatagramPacket(buf, buf.length);
+        try {
             socket.receive(packet);
-            DNSResponse response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID++);
-            if (response.queryID == queryID)
-                break;
+        } catch (SocketTimeoutException e) {
+            System.out.println("Exception receiving packet!");
         }
+        response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID);
+        System.out.println(response.queryID);
+        System.out.println(queryID);
         queryID++;
+//        if (response.queryID == queryID)
+//            break;
+
         return response;
     }
 }

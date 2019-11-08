@@ -48,7 +48,7 @@ public class DNSlookup {
             }
         }
         DNSQuery query = new DNSQuery(fqdn, rootNameServer, tracingOn, IPV6Query);
-        String result = query.query(rootNameServer);
+        query.query(rootNameServer);
     }
 
     private static void usage() {
