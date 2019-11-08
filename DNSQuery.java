@@ -18,7 +18,7 @@ public class DNSQuery {
     private InetAddress rootNS;
     private boolean toTrace;
     private boolean isIPV6;
-    private List<DNSResourceRecord> trace;
+    private List<String> trace;
     private int queryCount;
 
     public DNSQuery(String fqdn, InetAddress rootNS, boolean toTrace, boolean isIPV6) throws Exception {
@@ -32,22 +32,42 @@ public class DNSQuery {
     }
 
     // Recursively go through nameservers
-    public void query(InetAddress NS) throws IOException {
+    public void query(String host, InetAddress NS) throws IOException {
         queryCount++;
-        byte[] frame = buildFrame(fqdn, isIPV6);
+        byte[] frame = buildFrame(host, isIPV6);
         sendQuery(frame, NS);
+        if (isIPV6)
+            trace.add("\n\nQuery ID     " + queryID + " " + host + " AAAA --> " + NS.getHostAddress());
+        else
+            trace.add("\n\nQuery ID     " + queryID + " " + host + " A --> " + NS.getHostAddress());
         DNSResponse response = parseQuery();
-
+        trace.addAll(response.getTrace());
         if (response.isAuthoritative()) {
             // we have the ip
-            DNSResourceRecord answer = response.getAnswers().get(0);
-            System.out.println(answer.getTextFqdn());
-            System.out.println(answer.getHostName());
-            System.out.println(answer.getRecordType());
+//            for (DNSResourceRecord answer : response.getAnswers()) {
+//                System.out.println(answer.getTextFqdn());
+//                System.out.println(answer.getHostName());
+//                System.out.println(answer.getRecordType());
+//            }
+            if (response.isCNAME()) {
+                String hostName = response.getAnswers().get(0).getTextFqdn();
+                System.out.println(hostName);
+                query(hostName, rootNS);
+            } else if (response.getAdditionalInfo().size() == 0) {
+                System.out.println("reached size = 0");
+            } else if (toTrace) {
+                for (String s : trace) {
+                    System.out.println(s);
+                }
+
+            }
         } else {
-            String ns = response.getAdditionalInfo().get(0).getTextFqdn();
-            trace.add(response.getAdditionalInfo().get(0));
-            query(InetAddress.getByName(ns));
+            if (response.getAdditionalInfo().size() == 0) {
+                System.out.println("reached else");
+            } else {
+                String ns = response.getAdditionalInfo().get(0).getTextFqdn();
+                query(host, InetAddress.getByName(ns));
+            }
         }
     }
 
@@ -109,12 +129,9 @@ public class DNSQuery {
             System.out.println("Exception receiving packet!");
         }
         response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID);
-        System.out.println(response.queryID);
-        System.out.println(queryID);
         queryID++;
 //        if (response.queryID == queryID)
 //            break;
-
         return response;
     }
 }

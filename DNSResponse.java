@@ -12,7 +12,9 @@ import java.util.*;
 
 
 public class DNSResponse {
-    public int queryID;                  // this is for the response it must match the one in the request
+    private boolean isCNAME;
+    private List<String> trace;
+    private int queryID;                  // this is for the response it must match the one in the request
     private int expQueryID;               // Expected query ID
     private int answerCount = 0;          // number of answers  
     private boolean decoded = false;      // Was this response successfully decoded
@@ -31,6 +33,20 @@ public class DNSResponse {
 
     // When in trace mode you probably want to dump out all the relevant information in a response
     // Getters
+
+
+    public boolean isCNAME() {
+        return isCNAME;
+    }
+
+    public int getQueryID() {
+        return queryID;
+    }
+
+    public List<String> getTrace() {
+        return trace;
+    }
+
     public ArrayList<DNSResourceRecord> getAnswers() {
         return answers;
     }
@@ -59,6 +75,7 @@ public class DNSResponse {
 	public DNSResponse (DatagramPacket responsePacket, byte[] data,
                         int len, String fdqn, boolean isIPV6, int queryID)  throws IOException {
 	    buf = data;
+	    this.isCNAME = false;
 	    this.responsePacket = responsePacket;
 	    this.fdqn = fdqn;
 	    this.isIPV6 = isIPV6;
@@ -183,14 +200,17 @@ public class DNSResponse {
         int QTYPE = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
         int QCLASS = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
 
-        System.out.println("QTYPE: " + QTYPE);
-        System.out.println("QCLASS: " + QCLASS);
+        //System.out.println("QTYPE: " + QTYPE);
+        //System.out.println("QCLASS: " + QCLASS);
 
         // answer section:
 
+        trace = new ArrayList<>();
+        trace.add("Response ID: " + queryID + " Authoritative " + authoritative);
         DNSResourceRecord record = null;
         answers = new ArrayList<>();
-        System.out.println("  Answers (" + ANCOUNT + ")");
+        trace.add("  Answers (" + ANCOUNT + ")");
+        //System.out.println("  Answers (" + ANCOUNT + ")");
         for (int i = 0; i < ANCOUNT; i++) {
             try {
                 record = decodeOneRR(responseBuffer);
@@ -199,13 +219,15 @@ public class DNSResponse {
             }
             if (record != null){
                 answers.add(record);
+                trace.add(record.getTrace());
             }
         }
 
         // Authoritative section:
 
         AuthoritativeNSs = new ArrayList<DNSResourceRecord>();
-        System.out.println("  Authoritative NameServers: (" + ANCOUNT + ")");
+        trace.add("  Authoritative NameServers: (" + ANCOUNT + ")");
+        //System.out.println("  Authoritative NameServers: (" + ANCOUNT + ")");
         for (int i = 0; i < NSCOUNT; i++){
             try {
                 record = decodeOneRR(responseBuffer);
@@ -214,12 +236,14 @@ public class DNSResponse {
             }
             if (record != null){
                 AuthoritativeNSs.add(record);
+                trace.add(record.getTrace());
             }
         }
 
 
         additionalInfo = new ArrayList<DNSResourceRecord>();
-        System.out.println("  Additional Information (" + ARCOUNT + ")");
+        trace.add("  Additional Information (" + ARCOUNT + ")");
+        //System.out.println("  Additional Information (" + ARCOUNT + ")");
         for (int i=0; i < ARCOUNT; i++) {
             try {
                 record = decodeOneRR(responseBuffer);
@@ -228,20 +252,21 @@ public class DNSResponse {
             }
             if (record != null) {
                 additionalInfo.add(record);
+                trace.add(record.getTrace());
             }
         }
-        for (DNSResourceRecord rec : AuthoritativeNSs) {
-            System.out.println(rec.getHostName());
-            System.out.println(rec.getRecordType());
-            System.out.println(rec.getTextFqdn());
-            System.out.println(rec.getTTL());
-        }
-        for (DNSResourceRecord rec : additionalInfo) {
-            System.out.println(rec.getHostName());
-            System.out.println(rec.getRecordType());
-            System.out.println(rec.getTextFqdn());
-            System.out.println(rec.getTTL());
-        }
+//        for (DNSResourceRecord rec : AuthoritativeNSs) {
+//            System.out.println(rec.getHostName());
+//            System.out.println(rec.getRecordType());
+//            System.out.println(rec.getTextFqdn());
+//            System.out.println(rec.getTTL());
+//        }
+//        for (DNSResourceRecord rec : additionalInfo) {
+//            System.out.println(rec.getHostName());
+//            System.out.println(rec.getRecordType());
+//            System.out.println(rec.getTextFqdn());
+//            System.out.println(rec.getTTL());
+//        }
         // working on returning list of AuthNSs and Additional Info
 
 
@@ -288,6 +313,8 @@ public class DNSResponse {
         else if (typeCode == 2 || typeCode == 5 || typeCode == 6){ // NS or CNAME or SOA text fqdn
             String fqdn = getNameAtPointer(responseBuffer, pointer);
             record = new DNSResourceRecord(hostName, typeCode, TTL, fqdn);
+            if (record.getRecordType() == 5)
+                isCNAME = true;
         }
 
         // all other types
