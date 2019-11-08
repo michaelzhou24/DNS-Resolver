@@ -11,7 +11,7 @@ import java.util.List;
 public class DNSQuery {
 
     private final int DNS_SERVER_PORT = 53;
-
+    private boolean resolveNS;
     private short queryID = 0x0000;
     private DatagramSocket socket;
     private String fqdn;
@@ -32,7 +32,7 @@ public class DNSQuery {
     }
 
     // Recursively go through nameservers
-    public void query(String host, InetAddress NS) throws IOException {
+    public String query(String host, InetAddress NS) throws IOException {
         queryCount++;
         byte[] frame = buildFrame(host, isIPV6);
         sendQuery(frame, NS);
@@ -40,6 +40,7 @@ public class DNSQuery {
             trace.add("\n\nQuery ID     " + queryID + " " + host + " AAAA --> " + NS.getHostAddress());
         else
             trace.add("\n\nQuery ID     " + queryID + " " + host + " A --> " + NS.getHostAddress());
+        System.out.println(trace.get(trace.size()-1));
         DNSResponse response = parseQuery();
         trace.addAll(response.getTrace());
         if (response.isAuthoritative()) {
@@ -49,26 +50,34 @@ public class DNSQuery {
 //                System.out.println(answer.getHostName());
 //                System.out.println(answer.getRecordType());
 //            }
-            if (response.isCNAME()) {
+            if (resolveNS) {
+                System.out.println(response.getAnswers().get(0).getTextFqdn());
+                return response.getAnswers().get(0).getTextFqdn();
+            } else if (response.isCNAME()) {
                 String hostName = response.getAnswers().get(0).getTextFqdn();
                 System.out.println(hostName);
-                query(hostName, rootNS);
+                return query(hostName, rootNS);
             } else if (response.getAdditionalInfo().size() == 0) {
                 System.out.println("reached size = 0");
             } else if (toTrace) {
                 for (String s : trace) {
                     System.out.println(s);
                 }
-
             }
         } else {
             if (response.getAdditionalInfo().size() == 0) {
                 System.out.println("reached else");
+                resolveNS = true;
+                String ns = query(response.getAuthoritativeNSs().get(0).getTextFqdn(), rootNS);
+                System.out.println(ns);
+                resolveNS = false;
+                query(host, InetAddress.getByName(ns));
             } else {
                 String ns = response.getAdditionalInfo().get(0).getTextFqdn();
                 query(host, InetAddress.getByName(ns));
             }
         }
+        return null;
     }
 
     private byte[] buildFrame(String host, boolean isIPv6) throws IOException {
@@ -111,7 +120,7 @@ public class DNSQuery {
             socket.send(dnsReqPacket);
         } catch (IOException e) {
             System.err.println("Failed to send DNS request.");
-            e.printStackTrace();
+            System.out.println(rootNameServer.toString());
         }
     }
 

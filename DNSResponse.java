@@ -207,10 +207,11 @@ public class DNSResponse {
 
         trace = new ArrayList<>();
         trace.add("Response ID: " + queryID + " Authoritative " + authoritative);
+        System.out.println("Response ID: " + queryID + " Authoritative " + authoritative);
         DNSResourceRecord record = null;
         answers = new ArrayList<>();
         trace.add("  Answers (" + ANCOUNT + ")");
-        //System.out.println("  Answers (" + ANCOUNT + ")");
+        System.out.println("  Answers (" + ANCOUNT + ")");
         for (int i = 0; i < ANCOUNT; i++) {
             try {
                 record = decodeOneRR(responseBuffer);
@@ -220,6 +221,7 @@ public class DNSResponse {
             if (record != null){
                 answers.add(record);
                 trace.add(record.getTrace());
+                System.out.println(record.getTrace());
             }
         }
 
@@ -227,23 +229,24 @@ public class DNSResponse {
 
         AuthoritativeNSs = new ArrayList<DNSResourceRecord>();
         trace.add("  Authoritative NameServers: (" + ANCOUNT + ")");
-        //System.out.println("  Authoritative NameServers: (" + ANCOUNT + ")");
+        System.out.println("  Authoritative NameServers: (" + ANCOUNT + ")");
         for (int i = 0; i < NSCOUNT; i++){
             try {
                 record = decodeOneRR(responseBuffer);
             } catch (Exception e) {
                 System.out.println("Unkown Host Exception caught");
             }
-            if (record != null){
+            if (record != null) {
                 AuthoritativeNSs.add(record);
                 trace.add(record.getTrace());
+                System.out.println(record.getTrace());
             }
         }
 
 
         additionalInfo = new ArrayList<DNSResourceRecord>();
         trace.add("  Additional Information (" + ARCOUNT + ")");
-        //System.out.println("  Additional Information (" + ARCOUNT + ")");
+        System.out.println("  Additional Information (" + ARCOUNT + ")");
         for (int i=0; i < ARCOUNT; i++) {
             try {
                 record = decodeOneRR(responseBuffer);
@@ -253,6 +256,7 @@ public class DNSResponse {
             if (record != null) {
                 additionalInfo.add(record);
                 trace.add(record.getTrace());
+                System.out.println(record.getTrace());
             }
         }
 //        for (DNSResourceRecord rec : AuthoritativeNSs) {
