@@ -46,16 +46,9 @@ public class DNSQuery {
             trace.add("\n\nQuery ID     " + queryID + " " + host + " AAAA --> " + NS.getHostAddress());
         else
             trace.add("\n\nQuery ID     " + queryID + " " + host + " A --> " + NS.getHostAddress());
-//        System.out.println(trace.get(trace.size()-1));
         DNSResponse response = parseQuery();
         trace.addAll(response.getTrace());
         if (response.isAuthoritative()) {
-            // we have the ip
-//            for (DNSResourceRecord answer : response.getAnswers()) {
-//                System.out.println(answer.getTextFqdn());
-//                System.out.println(answer.getHostName());
-//                System.out.println(answer.getRecordType());
-//            }
             if (resolveNS) {
                 return response.getAnswers().get(0).getTextFqdn();
             } else if (response.isCNAME()) {
@@ -150,8 +143,6 @@ public class DNSQuery {
         }
         response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID);
         queryID++;
-//        if (response.queryID == queryID)
-//            break;
         return response;
     }
 }
