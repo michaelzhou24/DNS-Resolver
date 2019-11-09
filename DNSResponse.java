@@ -12,7 +12,9 @@ import java.util.*;
 
 
 public class DNSResponse {
-    public int queryID;                  // this is for the response it must match the one in the request
+    private boolean isCNAME;
+    private List<String> trace;
+    private int queryID;                  // this is for the response it must match the one in the request
     private int expQueryID;               // Expected query ID
     private int answerCount = 0;          // number of answers  
     private boolean decoded = false;      // Was this response successfully decoded
@@ -31,6 +33,20 @@ public class DNSResponse {
 
     // When in trace mode you probably want to dump out all the relevant information in a response
     // Getters
+
+
+    public boolean isCNAME() {
+        return isCNAME;
+    }
+
+    public int getQueryID() {
+        return queryID;
+    }
+
+    public List<String> getTrace() {
+        return trace;
+    }
+
     public ArrayList<DNSResourceRecord> getAnswers() {
         return answers;
     }
@@ -59,6 +75,7 @@ public class DNSResponse {
 	public DNSResponse (DatagramPacket responsePacket, byte[] data,
                         int len, String fdqn, boolean isIPV6, int queryID)  throws IOException {
 	    buf = data;
+	    this.isCNAME = false;
 	    this.responsePacket = responsePacket;
 	    this.fdqn = fdqn;
 	    this.isIPV6 = isIPV6;
@@ -183,13 +200,17 @@ public class DNSResponse {
         int QTYPE = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
         int QCLASS = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
 
-        System.out.println("QTYPE: " + QTYPE);
-        System.out.println("QCLASS: " + QCLASS);
+        //System.out.println("QTYPE: " + QTYPE);
+        //System.out.println("QCLASS: " + QCLASS);
 
         // answer section:
 
+        trace = new ArrayList<>();
+        trace.add("Response ID: " + queryID + " Authoritative " + authoritative);
+        System.out.println("Response ID: " + queryID + " Authoritative " + authoritative);
         DNSResourceRecord record = null;
         answers = new ArrayList<>();
+        trace.add("  Answers (" + ANCOUNT + ")");
         System.out.println("  Answers (" + ANCOUNT + ")");
         for (int i = 0; i < ANCOUNT; i++) {
             try {
@@ -199,26 +220,32 @@ public class DNSResponse {
             }
             if (record != null){
                 answers.add(record);
+                trace.add(record.getTrace());
+                System.out.println(record.getTrace());
             }
         }
 
         // Authoritative section:
 
         AuthoritativeNSs = new ArrayList<DNSResourceRecord>();
-        System.out.println("  Authoritative NameServers: (" + ANCOUNT + ")");
+        trace.add("  Nameservers: (" + ANCOUNT + ")");
+        System.out.println("  Nameservers: (" + ANCOUNT + ")");
         for (int i = 0; i < NSCOUNT; i++){
             try {
                 record = decodeOneRR(responseBuffer);
             } catch (Exception e) {
                 System.out.println("Unkown Host Exception caught");
             }
-            if (record != null){
+            if (record != null) {
                 AuthoritativeNSs.add(record);
+                trace.add(record.getTrace());
+                System.out.println(record.getTrace());
             }
         }
 
 
         additionalInfo = new ArrayList<DNSResourceRecord>();
+        trace.add("  Additional Information (" + ARCOUNT + ")");
         System.out.println("  Additional Information (" + ARCOUNT + ")");
         for (int i=0; i < ARCOUNT; i++) {
             try {
@@ -228,20 +255,22 @@ public class DNSResponse {
             }
             if (record != null) {
                 additionalInfo.add(record);
+                trace.add(record.getTrace());
+                System.out.println(record.getTrace());
             }
         }
-        for (DNSResourceRecord rec : AuthoritativeNSs) {
-            System.out.println(rec.getHostName());
-            System.out.println(rec.getRecordType());
-            System.out.println(rec.getTextFqdn());
-            System.out.println(rec.getTTL());
-        }
-        for (DNSResourceRecord rec : additionalInfo) {
-            System.out.println(rec.getHostName());
-            System.out.println(rec.getRecordType());
-            System.out.println(rec.getTextFqdn());
-            System.out.println(rec.getTTL());
-        }
+//        for (DNSResourceRecord rec : AuthoritativeNSs) {
+//            System.out.println(rec.getHostName());
+//            System.out.println(rec.getRecordType());
+//            System.out.println(rec.getTextFqdn());
+//            System.out.println(rec.getTTL());
+//        }
+//        for (DNSResourceRecord rec : additionalInfo) {
+//            System.out.println(rec.getHostName());
+//            System.out.println(rec.getRecordType());
+//            System.out.println(rec.getTextFqdn());
+//            System.out.println(rec.getTTL());
+//        }
         // working on returning list of AuthNSs and Additional Info
 //        if (AA == 1 || RCODE != 0){
 //            return null;
@@ -290,6 +319,8 @@ public class DNSResponse {
         else if (typeCode == 2 || typeCode == 5 || typeCode == 6){ // NS or CNAME or SOA text fqdn
             String fqdn = getNameAtPointer(responseBuffer, pointer);
             record = new DNSResourceRecord(hostName, typeCode, TTL, fqdn);
+            if (record.getRecordType() == 5)
+                isCNAME = true;
         }
 
         // all other types
@@ -316,6 +347,7 @@ public class DNSResponse {
         return ((b1 & 0xFF) << 8) + (b2 & 0xFF);
     }
 
+
     /**
      * 4 byte -> int
      * @param b1
@@ -324,17 +356,11 @@ public class DNSResponse {
      * @param b4
      * @return int
      */
+
     private int FourByteToInt(byte b1, byte b2, byte b3, byte b4) {
         return ((b1 & 0xFF) << 24) + ((b2 & 0xFF) << 16) + ((b3 & 0xFF) << 8) + (b4 & 0xFF);
     }
 
-    /**
-     * Recursively resolve the compressed name starting from pointer
-     *
-     * @param buffer byte array to be translated
-     * @param ptr initial location to start decoding
-     * @return resolved domain name
-     **/
     private String getNameAtPointer(byte[] buffer, int ptr){
         String name = "";
         while(true) {

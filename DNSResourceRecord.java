@@ -27,6 +27,20 @@ public class DNSResourceRecord {
         this.inetAddress = addr;
     }
 
+    public String getTrace() {
+        return String.format("       %-30s %-10d %-4s %s", hostName, TTL, getType(), textFqdn);
+    }
+
+    public String getType() {
+        switch (recordType) {
+            case 1 : return "A";
+            case 2 : return "NS";
+            case 5 : return "CN";
+            case 28 : return "AAAA";
+            default : return String.valueOf(recordType);
+        }
+    }
+
 
     public String getHostName(){
         return hostName;
