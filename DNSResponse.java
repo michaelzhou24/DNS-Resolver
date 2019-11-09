@@ -1,7 +1,7 @@
-import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 // Lots of the action associated with handling a DNS query is processing 
 // the response. Although not required you might find the following skeleton of
@@ -80,25 +80,6 @@ public class DNSResponse {
 	    this.expQueryID = queryID;
         decodeResponse(buf);
 	}
-
-//    public void readResponse() throws IOException {
-//        DataInputStream din = new DataInputStream(new ByteArrayInputStream(buf));
-//
-//        queryID = (int) din.readShort();
-//        System.out.println(String.format("%x", queryID));
-//        short flags = din.readShort();
-//        System.out.println(String.format("%x", flags));
-//        // get info from flags
-//        // verify response
-//        String s = Integer.toBinaryString(flags).substring(16,32);
-//        System.out.println(s);
-//
-//
-//        short questions = din.readShort();
-//        System.out.println(String.format("%x", questions));
-//        answerCount = (int) din.readShort();
-//        System.out.println(String.format("%x", answerCount));
-//        short numAuth = din.readShort();
 
 
     // Decode response header

@@ -1,7 +1,6 @@
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -158,12 +157,7 @@ public class DNSQuery {
         try {
             socket.receive(packet);
         } catch (SocketTimeoutException e) {
-           // timeout++;
-           // if (timeout > 2) {
                 handleError(fqdn + " -2  " + ipv6() + "  " + "0.0.0.0");
-           // } else {
-           //     query(host, ns);
-           // }
         }
         try {
             response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID);
