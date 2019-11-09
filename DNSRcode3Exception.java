@@ -1,4 +1,2 @@
-package PACKAGE_NAME;
-
-public class DNSRcode3Exception {
+public class DNSRcode3Exception extends Exception {
 }

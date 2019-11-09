@@ -9,7 +9,6 @@ import java.util.*;
 // parsed from the response. If you decide to use this class keep in mind that it is just a 
 // suggestion.  Feel free to add or delete methods or instance variables to best suit your implementation.
 
-
 public class DNSResponse {
     private boolean isCNAME;
     private List<String> trace;
@@ -72,7 +71,7 @@ public class DNSResponse {
     // probably the minimum that you need.
 
 	public DNSResponse (DatagramPacket responsePacket, byte[] data,
-                        int len, String fdqn, boolean isIPV6, int queryID)  throws IOException {
+                        int len, String fdqn, boolean isIPV6, int queryID)  throws DNSRcode3Exception, DNSRcodeException {
 	    buf = data;
 	    this.isCNAME = false;
 	    this.responsePacket = responsePacket;
@@ -103,7 +102,7 @@ public class DNSResponse {
 
 
     // Decode response header
-    private void decodeResponse(byte[] responseBuffer) {
+    private void decodeResponse(byte[] responseBuffer) throws DNSRcode3Exception, DNSRcodeException{
 
 
         // header section:
@@ -123,24 +122,10 @@ public class DNSResponse {
             case 0:
                 message = "No error condition";
                 break;
-            case 1:
-                message = "FAILED. Format error, Name server can't interpret query";
-                break;
-            case 2:
-                message = "FAILED. Name server error";
-                break;
             case 3:
-                message = "FAILED. Name error – name doesnot exist";
-                break;
-            case 4:
-                message = "FAILED. Requested quet type not supported";
-                break;
-            case 5:
-                message = "FAILED. Request refused";
-                break;
+                throw new DNSRcode3Exception();
             default:
-                message = "FAILED. Unknown RCODE";
-                break;
+                throw new DNSRcodeException();
         }
         // System.out.println(message);
 

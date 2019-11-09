@@ -1,6 +1,7 @@
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -10,6 +11,7 @@ import java.util.List;
 
 public class DNSQuery {
 
+    private int timeout = 2;
     private final int DNS_SERVER_PORT = 53;
     private boolean resolveNS;
     private short queryID = 0x0000;
@@ -32,10 +34,18 @@ public class DNSQuery {
         socket = new DatagramSocket();
     }
 
+    private String ipv6() {
+        if (isIPV6)
+            return "AAAA";
+        return "A";
+    }
+
     // Recursively go through nameservers
     public String query(String host, InetAddress NS) throws IOException {
         queryCount++;
-
+        if (queryCount > 25) {
+            handleError(fqdn+" -3  "+ipv6()+"  "+"0.0.0.0");
+        }
         byte[] frame;
         if (!resolveNS)
             frame = buildFrame(host, isIPV6);
@@ -47,7 +57,7 @@ public class DNSQuery {
         else
             trace.add("\n\nQuery ID     " + queryID + " " + host + " A --> " + NS.getHostAddress());
 //        System.out.println(trace.get(trace.size()-1));
-        DNSResponse response = parseQuery();
+        DNSResponse response = parseQuery(host, NS);
         trace.addAll(response.getTrace());
         if (response.isAuthoritative()) {
             // we have the ip
@@ -79,7 +89,11 @@ public class DNSQuery {
         } else {
             if (response.getAdditionalInfo().size() == 0) {
                 resolveNS = true;
-                String ns = query(response.getAuthoritativeNSs().get(0).getTextFqdn(), rootNS);
+                ArrayList<DNSResourceRecord> authnses = response.getAuthoritativeNSs();
+                if (authnses.size() == 0) {
+                    handleError(fqdn+"  -6  "+ipv6()+"  0.0.0.0");
+                }
+                String ns = query(authnses.get(0).getTextFqdn(), rootNS);
                 resolveNS = false;
                 return query(host, InetAddress.getByName(ns));
             } else {
@@ -96,6 +110,9 @@ public class DNSQuery {
         return null;
     }
 
+    /*
+      Creates the DNS query packet based on host to query and whether or not it is an IPv6 query
+     */
     private byte[] buildFrame(String host, boolean isIPv6) throws IOException {
         ByteArrayOutputStream frame = new ByteArrayOutputStream();
         DataOutputStream data = new DataOutputStream(frame);
@@ -124,20 +141,22 @@ public class DNSQuery {
         return frame.toByteArray();
     }
 
-
-    private void sendQuery(byte[] frame, InetAddress rootNameServer) {
-        DatagramPacket dnsReqPacket = new DatagramPacket(frame, frame.length, rootNameServer, DNS_SERVER_PORT);
+    /*
+      Sends packet to nameserver.
+     */
+    private void sendQuery(byte[] frame, InetAddress ns) {
+        DatagramPacket dnsReqPacket = new DatagramPacket(frame, frame.length, ns, DNS_SERVER_PORT);
         try {
             socket.send(dnsReqPacket);
         } catch (IOException e) {
             System.err.println("Failed to send DNS request.");
-            System.out.println(rootNameServer.toString());
+            System.out.println(ns.toString());
         }
     }
 
     // Return null/empty string if found ans
     // Else return IP address of next NS.
-    private DNSResponse parseQuery() throws IOException {
+    private DNSResponse parseQuery(String host, InetAddress ns) throws IOException {
         DNSResponse response = null;
         byte[] buf = new byte[1024];
         int i = 0;
@@ -146,12 +165,31 @@ public class DNSQuery {
         try {
             socket.receive(packet);
         } catch (SocketTimeoutException e) {
-            System.out.println("Exception receiving packet!");
+           // timeout++;
+           // if (timeout > 2) {
+                handleError(fqdn + " -2  " + ipv6() + "  " + "0.0.0.0");
+           // } else {
+           //     query(host, ns);
+           // }
         }
-        response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID);
+        try {
+            response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID);
+        } catch (DNSRcodeException e) {
+            handleError(fqdn+" -4  "+ipv6()+"  "+"0.0.0.0");
+        } catch (DNSRcode3Exception e) {
+            handleError(fqdn+" -1  "+ipv6()+"  "+"0.0.0.0");
+        }
         queryID++;
-//        if (response.queryID == queryID)
-//            break;
         return response;
+    }
+
+    private void handleError(String msg) {
+        if (toTrace) {
+            for (String s : trace) {
+                System.out.println(s);
+            }
+        }
+        System.out.println(msg);
+        System.exit(0);
     }
 }
