@@ -251,7 +251,7 @@ public class DNSResponse {
             try {
                 record = decodeOneRR(responseBuffer);
             } catch (Exception e) {
-                System.out.println("Unkown Host Exception caught");
+                System.out.println("Unknown Host Exception caught");
             }
             if (record != null) {
                 additionalInfo.add(record);
@@ -272,8 +272,11 @@ public class DNSResponse {
 //            System.out.println(rec.getTTL());
 //        }
         // working on returning list of AuthNSs and Additional Info
-
-
+//        if (AA == 1 || RCODE != 0){
+//            return null;
+//        } else {
+//            ArrayList<DNSResourceRecord> Authoritative
+//        }
     }
 
 
@@ -313,7 +316,6 @@ public class DNSResponse {
             // print
         }
 
-        // working on decoding NS name
         else if (typeCode == 2 || typeCode == 5 || typeCode == 6){ // NS or CNAME or SOA text fqdn
             String fqdn = getNameAtPointer(responseBuffer, pointer);
             record = new DNSResourceRecord(hostName, typeCode, TTL, fqdn);
@@ -335,9 +337,25 @@ public class DNSResponse {
 
     // ---------------------------------- Helper Functions ---------------------------------
 
+    /**
+     * 2 byte -> int
+     * @param b1
+     * @param b2
+     * @return int
+     */
     private int TwoByteToInt(byte b1, byte b2) {
         return ((b1 & 0xFF) << 8) + (b2 & 0xFF);
     }
+
+
+    /**
+     * 4 byte -> int
+     * @param b1
+     * @param b2
+     * @param b3
+     * @param b4
+     * @return int
+     */
 
     private int FourByteToInt(byte b1, byte b2, byte b3, byte b4) {
         return ((b1 & 0xFF) << 24) + ((b2 & 0xFF) << 16) + ((b3 & 0xFF) << 8) + (b4 & 0xFF);
