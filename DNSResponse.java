@@ -10,7 +10,6 @@ import java.util.*;
 // suggestion.  Feel free to add or delete methods or instance variables to best suit your implementation.
 
 
-
 public class DNSResponse {
     private boolean isCNAME;
     private List<String> trace;
@@ -101,24 +100,7 @@ public class DNSResponse {
 //        answerCount = (int) din.readShort();
 //        System.out.println(String.format("%x", answerCount));
 //        short numAuth = din.readShort();
-//        System.out.println(String.format("%x", numAuth));
-//        short numAdditional = din.readShort();
-//        System.out.println(String.format("%x", numAdditional));
-//
-//        // find fdqn
-//        StringBuilder responseFdqn = new StringBuilder();
-//        int recLen = 0;
-//        while ((recLen = din.readByte()) > 0) {
-//            byte[] record = new byte[recLen];
-//            for (int i = 0; i < recLen; i++) {
-//                record[i] = din.readByte();
-//            }
-//            responseFdqn.append(new String(record, "UTF-8"));
-//            responseFdqn.append('.');
-//        }
-//        responseFdqn.setLength(responseFdqn.length() - 1);
-//        System.out.println(responseFdqn.toString());
-//    }
+
 
     // Decode response header
     private void decodeResponse(byte[] responseBuffer) {
@@ -135,14 +117,6 @@ public class DNSResponse {
         int RD = responseBuffer[2] & 0x01; // get 8th bit
         int RA = responseBuffer[3] & 0x80;
         int RCODE = responseBuffer[3] & 0x0F;
-//        System.out.println("responseID: " + responseID);
-//        System.out.println("QR: " + QR);
-//        System.out.println("opCode: " + opCode);
-//        System.out.println("AA: " + AA);
-//        System.out.println("TC: " + TC);
-//        System.out.println("RD: " + RD);
-//        System.out.println("RA: " + RA);
-//        System.out.println("RCODE: " + RCODE);
 
         String message = "";
         switch (RCODE) {
@@ -176,11 +150,6 @@ public class DNSResponse {
         int ARCOUNT = TwoByteToInt(responseBuffer[10], responseBuffer[11]);
         if (ANCOUNT > 0)
             authoritative = true;
-//        System.out.println("QDCOUNT: " + QDCOUNT);
-//        System.out.println("ANCOUNT: " + ANCOUNT);
-//        System.out.println("NSCOUNT: " + NSCOUNT);
-//        System.out.println("ARCOUNT: " + ARCOUNT);
-
 
         // question section:
 
@@ -200,18 +169,13 @@ public class DNSResponse {
         int QTYPE = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
         int QCLASS = TwoByteToInt(responseBuffer[pointer++], responseBuffer[pointer++]);
 
-        //System.out.println("QTYPE: " + QTYPE);
-        //System.out.println("QCLASS: " + QCLASS);
-
         // answer section:
 
         trace = new ArrayList<>();
         trace.add("Response ID: " + queryID + " Authoritative " + authoritative);
-//        System.out.println("Response ID: " + queryID + " Authoritative " + authoritative);
         DNSResourceRecord record = null;
         answers = new ArrayList<>();
         trace.add("  Answers (" + ANCOUNT + ")");
-//        System.out.println("  Answers (" + ANCOUNT + ")");
         for (int i = 0; i < ANCOUNT; i++) {
             try {
                 record = decodeOneRR(responseBuffer);
@@ -221,7 +185,6 @@ public class DNSResponse {
             if (record != null){
                 answers.add(record);
                 trace.add(record.getTrace());
-//                System.out.println(record.getTrace());
             }
         }
 
@@ -229,7 +192,6 @@ public class DNSResponse {
 
         AuthoritativeNSs = new ArrayList<DNSResourceRecord>();
         trace.add("  Nameservers: (" + ANCOUNT + ")");
-//        System.out.println("  Nameservers: (" + ANCOUNT + ")");
         for (int i = 0; i < NSCOUNT; i++){
             try {
                 record = decodeOneRR(responseBuffer);
@@ -239,14 +201,12 @@ public class DNSResponse {
             if (record != null) {
                 AuthoritativeNSs.add(record);
                 trace.add(record.getTrace());
-//                System.out.println(record.getTrace());
             }
         }
 
 
         additionalInfo = new ArrayList<DNSResourceRecord>();
         trace.add("  Additional Information (" + ARCOUNT + ")");
-//        System.out.println("  Additional Information (" + ARCOUNT + ")");
         for (int i=0; i < ARCOUNT; i++) {
             try {
                 record = decodeOneRR(responseBuffer);
@@ -256,27 +216,8 @@ public class DNSResponse {
             if (record != null) {
                 additionalInfo.add(record);
                 trace.add(record.getTrace());
-//                System.out.println(record.getTrace());
             }
         }
-//        for (DNSResourceRecord rec : AuthoritativeNSs) {
-//            System.out.println(rec.getHostName());
-//            System.out.println(rec.getRecordType());
-//            System.out.println(rec.getTextFqdn());
-//            System.out.println(rec.getTTL());
-//        }
-//        for (DNSResourceRecord rec : additionalInfo) {
-//            System.out.println(rec.getHostName());
-//            System.out.println(rec.getRecordType());
-//            System.out.println(rec.getTextFqdn());
-//            System.out.println(rec.getTTL());
-//        }
-        // working on returning list of AuthNSs and Additional Info
-//        if (AA == 1 || RCODE != 0){
-//            return null;
-//        } else {
-//            ArrayList<DNSResourceRecord> Authoritative
-//        }
     }
 
 
@@ -298,8 +239,6 @@ public class DNSResponse {
             addr = InetAddress.getByName(address);
 
             record = new DNSResourceRecord(hostName, typeCode, TTL, addr);
-            // create and store a new record in the record class
-            // print
         }
         else if (typeCode == 28) { // AAAA IPV6 address
             String address = "";
@@ -311,20 +250,17 @@ public class DNSResponse {
             address = address.substring(0, address.length() - 1);
             InetAddress addr = null;
             addr = InetAddress.getByName(address);
-            // create and store a new record in the record class
             record = new DNSResourceRecord(hostName, typeCode, TTL, addr);
-            // print
         }
 
-        else if (typeCode == 2 || typeCode == 5 || typeCode == 6){ // NS or CNAME or SOA text fqdn
+        else if (typeCode == 2 || typeCode == 5 || typeCode == 6){ // NS or CNAME text fqdn
             String fqdn = getNameAtPointer(responseBuffer, pointer);
             record = new DNSResourceRecord(hostName, typeCode, TTL, fqdn);
             if (record.getRecordType() == 5)
                 isCNAME = true;
         }
 
-        // all other types
-        else{
+        else{ // all other types
             String fqdn = getNameAtPointer(responseBuffer, pointer);
             record = new DNSResourceRecord(hostName, typeCode, TTL, fqdn);
         }

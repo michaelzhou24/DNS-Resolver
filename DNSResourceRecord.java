@@ -41,7 +41,6 @@ public class DNSResourceRecord {
         }
     }
 
-
     public String getHostName(){
         return hostName;
     }
