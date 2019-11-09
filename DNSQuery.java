@@ -28,19 +28,25 @@ public class DNSQuery {
         this.toTrace = toTrace;
         this.isIPV6 = isIPV6;
         this.queryCount = 0;
+        this.resolveNS = false;
         socket = new DatagramSocket();
     }
 
     // Recursively go through nameservers
     public String query(String host, InetAddress NS) throws IOException {
         queryCount++;
-        byte[] frame = buildFrame(host, isIPV6);
+
+        byte[] frame;
+        if (!resolveNS)
+            frame = buildFrame(host, isIPV6);
+        else frame = buildFrame(host, false);
+
         sendQuery(frame, NS);
         if (isIPV6)
             trace.add("\n\nQuery ID     " + queryID + " " + host + " AAAA --> " + NS.getHostAddress());
         else
             trace.add("\n\nQuery ID     " + queryID + " " + host + " A --> " + NS.getHostAddress());
-        System.out.println(trace.get(trace.size()-1));
+//        System.out.println(trace.get(trace.size()-1));
         DNSResponse response = parseQuery();
         trace.addAll(response.getTrace());
         if (response.isAuthoritative()) {
@@ -61,13 +67,12 @@ public class DNSQuery {
                         System.out.println(s);
                     }
                 }
-
                 for (DNSResourceRecord record : response.getAnswers()) {
                     if (!isIPV6 && record.getRecordType() == 1) {
-                        System.out.println(fqdn + " " + record.getTTL() + " " + record.getTextFqdn());
+                        System.out.println(fqdn + "  " + record.getTTL() + "  A  " + record.getTextFqdn());
                     }
-                    if (isIPV6 && record.getRecordType() == 5) {
-                        System.out.println(fqdn + " " + record.getTTL() + " " + record.getTextFqdn());
+                    if (isIPV6 && record.getRecordType() == 28) {
+                        System.out.println(fqdn + "  " + record.getTTL() + "  AAAA  " + record.getTextFqdn());
                     }
                 }
             }
