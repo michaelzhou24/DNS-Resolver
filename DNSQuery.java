@@ -51,30 +51,41 @@ public class DNSQuery {
 //                System.out.println(answer.getRecordType());
 //            }
             if (resolveNS) {
-                System.out.println(response.getAnswers().get(0).getTextFqdn());
                 return response.getAnswers().get(0).getTextFqdn();
             } else if (response.isCNAME()) {
                 String hostName = response.getAnswers().get(0).getTextFqdn();
-                System.out.println(hostName);
                 return query(hostName, rootNS);
-            } else if (response.getAdditionalInfo().size() == 0) {
-                System.out.println("reached size = 0");
-            } else if (toTrace) {
-                for (String s : trace) {
-                    System.out.println(s);
+            } else {
+                if (toTrace) {
+                    for (String s : trace) {
+                        System.out.println(s);
+                    }
+                }
+
+                for (DNSResourceRecord record : response.getAnswers()) {
+                    if (!isIPV6 && record.getRecordType() == 1) {
+                        System.out.println(fqdn + " " + record.getTTL() + " " + record.getTextFqdn());
+                    }
+                    if (isIPV6 && record.getRecordType() == 5) {
+                        System.out.println(fqdn + " " + record.getTTL() + " " + record.getTextFqdn());
+                    }
                 }
             }
         } else {
             if (response.getAdditionalInfo().size() == 0) {
-                System.out.println("reached else");
                 resolveNS = true;
                 String ns = query(response.getAuthoritativeNSs().get(0).getTextFqdn(), rootNS);
-                System.out.println(ns);
                 resolveNS = false;
-                query(host, InetAddress.getByName(ns));
+                return query(host, InetAddress.getByName(ns));
             } else {
-                String ns = response.getAdditionalInfo().get(0).getTextFqdn();
-                query(host, InetAddress.getByName(ns));
+                String ns = "";
+                for (DNSResourceRecord record : response.getAdditionalInfo()) {
+                    if (record.getRecordType() == 1) {
+                        ns = record.getTextFqdn();
+                        break;
+                    }
+                }
+                return query(host, InetAddress.getByName(ns));
             }
         }
         return null;
@@ -83,17 +94,12 @@ public class DNSQuery {
     private byte[] buildFrame(String host, boolean isIPv6) throws IOException {
         ByteArrayOutputStream frame = new ByteArrayOutputStream();
         DataOutputStream data = new DataOutputStream(frame);
-        // Query ID
+
         data.writeShort(queryID);
-        // Standard Query
         data.writeShort(0x0100);
-        // Question Count
         data.writeShort(0x0001);
-        // Answer Record
         data.writeShort(0x0000);
-        // Authority Record
         data.writeShort(0x0000);
-        // Additional Record
         data.writeShort(0x0000);
 
         String[] domainParts = host.split("\\.");

@@ -228,8 +228,8 @@ public class DNSResponse {
         // Authoritative section:
 
         AuthoritativeNSs = new ArrayList<DNSResourceRecord>();
-        trace.add("  Authoritative NameServers: (" + ANCOUNT + ")");
-        System.out.println("  Authoritative NameServers: (" + ANCOUNT + ")");
+        trace.add("  Nameservers: (" + ANCOUNT + ")");
+        System.out.println("  Nameservers: (" + ANCOUNT + ")");
         for (int i = 0; i < NSCOUNT; i++){
             try {
                 record = decodeOneRR(responseBuffer);
@@ -335,35 +335,14 @@ public class DNSResponse {
 
     // ---------------------------------- Helper Functions ---------------------------------
 
-    /**
-     * 2 byte -> int
-     * @param b1
-     * @param b2
-     * @return
-     */
     private int TwoByteToInt(byte b1, byte b2) {
         return ((b1 & 0xFF) << 8) + (b2 & 0xFF);
     }
 
-    /**
-     * 4 byte -> int
-     * @param b1
-     * @param b2
-     * @param b3
-     * @param b4
-     * @return
-     */
     private int FourByteToInt(byte b1, byte b2, byte b3, byte b4) {
         return ((b1 & 0xFF) << 24) + ((b2 & 0xFF) << 16) + ((b3 & 0xFF) << 8) + (b4 & 0xFF);
     }
 
-    /**
-     * Recursively resolve the compressed name starting from pointer
-     *
-     * @param buffer byte array to be translated
-     * @param ptr initial location to start decoding
-     * @return resolved domain name
-     **/
     private String getNameAtPointer(byte[] buffer, int ptr){
         String name = "";
         while(true) {
