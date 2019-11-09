@@ -156,14 +156,15 @@ public class DNSQuery {
         // Try capturing at most 30 packets
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         try {
+            socket.setSoTimeout(2000); // wait 2 sec to try receiving packet
             socket.receive(packet);
         } catch (SocketTimeoutException e) {
-           // timeout++;
-           // if (timeout > 2) {
+            timeout++;
+            if (timeout > 3) {
                 handleError(fqdn + " -2  " + ipv6() + "  " + "0.0.0.0");
-           // } else {
-           //     query(host, ns);
-           // }
+            } else {
+                query(host, ns);
+            }
         }
         try {
             response = new DNSResponse(packet, buf, buf.length, fqdn, isIPV6, queryID);
