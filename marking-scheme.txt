@@ -1,1 +1,18 @@
-Replace with the proper scheme
+Total before late penalty: [60/62]
+You can check file commandline_outputs.txt for the full output from the autoexpect tests.
+You can also refer to rubric at Canvas for more details.
+Automatically graded points: 47 / 48
+
+Criteria || Pts || Comments tracing || 12 / 13 || These are NOT handled correctly: Prints TTLs correctly, -1 pts, 
+error handling || 8 / 8 || Is this love/?
+functionality || 27 / 27 || just wow
+
+
+Good luck with all the projects and finals <3
+
+This part is graded manually: 13 / 14
+
+Criteria || Pts || Commentsother || 5 / 5 || 
+documentation || 2 / 3 || Scares comments -1pt
+quality || 3 / 3 || 
+readability || 3 / 3 || 
